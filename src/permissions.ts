@@ -1,8 +1,10 @@
 /**
- * Server-side permission model.
+ * Server-side permission policy — the single place access is DECIDED.
  *
- * Permissions are decided here and nowhere else, so a tool author cannot forget a
- * check. Two independent dimensions keep the rules honest:
+ * This module only decides ("does user U hold capability C?"). It is ENFORCED in
+ * one place: the gateway runs this check on every write/approval, so no individual
+ * tool re-implements or forgets access control. Two independent dimensions keep the
+ * rules honest:
  *   - the ROLE ("sales" | "viewer") decides what a user may read and write, and
  *   - the APPROVER flag decides who may approve, regardless of role.
  * Keeping them separate means "a salesperson who isn't an approver" and "a user

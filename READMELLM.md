@@ -32,15 +32,17 @@ Contacts `c1..c4`. One seed activity `a1` on `d1`. Queue + audit start empty.
 | `view_deal` | `dealId` | read | — | one deal | no |
 | `list_deal_activities` | `dealId` | read | — | activities for a deal | no |
 | `log_activity` | `dealId`,`note` | write_low_risk | low | append activity NOW | yes: `executed` |
-| `update_deal` | `dealId`,`changes` | write_high_risk | high | QUEUE a proposal (not applied) | yes: `queued` |
+| `update_deal` | `dealId`, `stage?`/`value?`/`notes?` (or raw `changes`) | write_high_risk | high | QUEUE a proposal (not applied) | yes: `queued` |
 | `view_pending_queue` | — | read | — | pending actions | no |
 | `approve_pending_action` | `actionId` | approve | — | apply a queued change | yes: `approved`/`rejected`/`denied` |
 | `reject_pending_action` | `actionId`,`reason?` | approve | — | drop a queued change | yes: `rejected`/`denied` |
 | `view_audit_log` | `dealId?` | read | — | audit trail, newest first | no |
 
-`changes` = object with any of `stage` (enum), `value` (number ≥ 0), `notes` (string); ≥1 field;
-unknown keys rejected. The transport schema is loose (`z.record`); the AUTHORITATIVE, audited
-validation is `DealChangeSchema.safeParse` inside `Gateway.proposeDealUpdate`.
+`update_deal` accepts `stage`/`value`/`notes` as direct optional fields (friendly) OR a raw
+`changes` object (advanced); `server.ts` merges them (direct fields win) and passes one object to
+the gateway. `stage` = enum, `value` = number ≥ 0, `notes` = string; ≥1 field, unknown keys
+rejected. The AUTHORITATIVE, audited validation is `DealChangeSchema.safeParse` inside
+`Gateway.proposeDealUpdate` (so an empty or invented-field payload is rejected AND audited).
 
 ## PERMISSION RULES (`permissions.ts`, enforced server-side in the gateway)
 - role→caps: `sales → {read, write_low_risk, write_high_risk}`, `viewer → {read}`.

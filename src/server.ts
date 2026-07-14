@@ -16,6 +16,7 @@ import { MockCrmAdapter } from "./mock-crm-adapter.js";
 import { ApprovalQueue } from "./approval-queue.js";
 import { AuditLog } from "./audit-log.js";
 import { Gateway } from "./gateway.js";
+import { DEAL_STAGES } from "./schemas.js";
 import type { GatewayResult } from "./types.js";
 
 // ── Compose the Hub once (all in-memory for the challenge) ──────────────────
@@ -39,13 +40,22 @@ const queryArg = z.string().trim().describe("Search text, matched against contac
 const noteArg = z.string().trim().min(1).describe("The activity note to record.");
 const reasonArg = z.string().trim().optional().describe("Optional reason, recorded in the audit log.");
 const auditFilterArg = z.string().trim().optional().describe("Optional deal id to filter the audit trail.");
-// Loose on purpose: the authoritative, *audited* validation lives in the gateway
-// (Gateway.proposeDealUpdate), so a malformed payload leaves an audit trail instead of being
-// silently rejected here at the transport layer.
+// The friendly way to update a deal: set stage / value / notes as individual fields.
+const stageArg = z
+  .enum(DEAL_STAGES)
+  .optional()
+  .describe("New stage: lead | qualified | proposal | negotiation | won | lost.");
+const valueArg = z.number().nonnegative().optional().describe("New deal value (a number ≥ 0).");
+const dealNotesArg = z.string().trim().optional().describe("New notes text for the deal.");
+
+// Advanced alternative: a raw object. Loose on purpose — the authoritative, *audited* validation
+// lives in the gateway (Gateway.proposeDealUpdate), so a malformed object (e.g. an invented
+// field) leaves an audit trail instead of being silently rejected at the transport layer.
 const changesArg = z
   .record(z.unknown())
+  .optional()
   .describe(
-    "Proposed changes as an object. Recognized fields: stage (lead|qualified|proposal|negotiation|won|lost), value (number ≥ 0), notes (string). At least one is required; unknown fields are rejected and the attempt is audited.",
+    "Advanced: a raw changes object, as an alternative to the stage/value/notes fields. Unknown keys are rejected and the attempt is audited.",
   );
 
 /** Serialize a GatewayResult into the MCP tool response shape. */
@@ -99,9 +109,18 @@ server.tool(
 
 server.tool(
   "update_deal",
-  "Propose a change to a deal (stage, value and/or notes). Only the fields you include are changed; any field you omit is left as-is. High-risk: this does NOT apply immediately — it is queued for an approver to release or reject.",
-  { user: userArg, dealId: dealIdArg, changes: changesArg },
-  async ({ user, dealId, changes }) => toToolResult(gateway.proposeDealUpdate(user, dealId, changes)),
+  "Propose a change to a deal. The friendly way: set stage, value and/or notes directly. (Advanced: pass a raw `changes` object instead.) Only the fields you include change; omitted fields are left as-is. High-risk: this does NOT apply immediately — it is queued for an approver to release or reject.",
+  { user: userArg, dealId: dealIdArg, stage: stageArg, value: valueArg, notes: dealNotesArg, changes: changesArg },
+  async ({ user, dealId, stage, value, notes, changes }) => {
+    // Two ways to describe the change: individual fields (friendly) or a raw `changes` object
+    // (advanced). Individual fields win if both name the same key. The gateway then validates
+    // and audits the result, so the friendly path enjoys exactly the same guarantees.
+    const merged: Record<string, unknown> = { ...(changes ?? {}) };
+    if (stage !== undefined) merged.stage = stage;
+    if (value !== undefined) merged.value = value;
+    if (notes !== undefined) merged.notes = notes;
+    return toToolResult(gateway.proposeDealUpdate(user, dealId, merged));
+  },
 );
 
 // ── Approval + oversight tools ──────────────────────────────────────────────

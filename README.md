@@ -226,7 +226,7 @@ arguments to enter. This is also a ready-made script for the screen recording.
 |---|---|---|---|
 | 1 | `view_deal` | `user: sara`, `dealId: d1` | Deal `d1` at stage `proposal`, value `45000`. |
 | 2 | `log_activity` | `user: sara`, `dealId: d1`, `note: Called Hendrik, positive.` | **Executes immediately.** Note is saved. |
-| 3 | `update_deal` | `user: sara`, `dealId: d1`, `changes: {"stage":"negotiation","value":50000}` | **Queued** as `pa_1`. The deal is *not* changed yet. |
+| 3 | `update_deal` | `user: sara`, `dealId: d1`, `stage: negotiation`, `value: 50000` | **Queued** as `pa_1`. The deal is *not* changed yet. |
 | 4 | `view_deal` | `user: sara`, `dealId: d1` | Still `proposal` / `45000` — proving the queue actually gates. |
 | 5 | `view_pending_queue` | `user: sara` | One item: `pa_1`, status `pending`, with its snapshot. |
 | 6 | `approve_pending_action` | `user: sara`, `actionId: pa_1` | **Approved.** Now the change hits the CRM. |
@@ -236,6 +236,8 @@ arguments to enter. This is also a ready-made script for the screen recording.
 | 10 | `view_audit_log` | `user: sara` | The whole story, newest first: executed, queued, approved, and both denials. |
 
 Notes:
+- **Two ways to update:** fill `stage` / `value` / `notes` directly (the friendly way), or pass a
+  raw `changes` object (advanced). Both funnel through the same gateway validation and audit.
 - **Partial update:** `update_deal` only changes the fields you include — omit `notes` and the
   existing notes are left as-is. (A full-object "replace the whole deal" mode is a deliberate
   non-goal for the core; it'd be a "with more time" addition.)

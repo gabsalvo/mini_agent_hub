@@ -365,9 +365,14 @@ The log is **append-only** — records are never mutated or deleted, and `before
 clones so nothing can rewrite history after the fact. A **`queued`** record shows the current
 deal (`before`) and the proposed diff (`changes`) but **no `after`** — nothing has been applied
 yet, so an `after` only appears once the change is actually applied (`approved` / `executed`).
-Every write path produces exactly one record: a direct write (`executed`), a queued proposal
-(`queued`), an approval (`approved`), a rejection or a stale failure (`rejected`), and a
-permission denial (`denied`).
+**Audit coverage — stated precisely.** Every *state-changing* action **and** every *blocked*
+write/approval attempt produces exactly one record: a direct write (`executed`), a queued
+proposal (`queued`), an approval (`approved`), an approver / stale / invalid-payload rejection
+(`rejected`), and a permission-or-unknown-user denial (`denied`). **Pure reads produce no
+record** — including `view_deal`, `view_pending_queue`, and `view_audit_log` — by design: the
+trail reconstructs what the agent *changed*, not what it *looked at*. So "everything is audited"
+means every write, approval, and blocked attempt — not read-only calls (see the read-audit
+trade-off under the permission model above).
 
 **Two naming choices worth flagging (the brief asks *why* we chose what we chose):**
 

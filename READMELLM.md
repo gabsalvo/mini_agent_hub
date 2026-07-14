@@ -137,20 +137,3 @@ In-memory ⇒ resets to 1 on restart (documented trade-off; prod = DB sequence /
 | `sequence.ts` | monotonic id allocator | (none) |
 | `types.ts` | shared shapes | crm(types) |
 | `crm.ts` | GIVEN mock CRM; do not edit; public methods only | (fs) |
-
-## EXTENSION RECIPES
-- Add a READ/WRITE tool: add a `Gateway` method (reuse `requireReader`/`authorizeWriter` + audit),
-  then register a thin tool in `server.ts` via the shared arg schemas + `toToolResult`.
-- Add a high-risk action type: extend `PendingActionType` union in `types.ts`; add an enqueue path
-  + an apply path in `approveAction`; keep snapshot/clone + audit invariants.
-- Swap/add a CRM backend: write a new class implementing `CrmPort`, construct it in `server.ts`.
-  No gateway/queue/audit/permission change. This is the whole point of the port.
-- Real auth (prod): replace `permissions.ts` decision source with verified identity (OAuth/OIDC,
-  IdP/RBAC/ABAC). The `user` string is only a stand-in. Gateway/queue/audit stay unchanged.
-
-## GOTCHAS
-- `crm.getDeal()` returns a LIVE reference; `crm.updateDeal()` mutates in place. Always clone
-  before storing as snapshot/before/after, or the "before" mutates into the "after".
-- `approve_pending_action` re-checks freshness; a stale action is rejected, not applied.
-- `update_deal` is a PARTIAL update: only included fields change; omitted fields are untouched.
-- Ids/state are per server process; each MCP client spawns its own process (separate state).

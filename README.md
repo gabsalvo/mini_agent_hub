@@ -300,6 +300,15 @@ Two independent dimensions, so the model has no special cases:
 The gateway checks this on **every** call; no tool can bypass it. Reads are open to any
 authenticated user — an auditor reconstructs what the agent *changed*, not what anyone *read*.
 
+> **Design choice — reads aren't audited, including failed ones.** Successful reads leave no
+> record on purpose (the trail is about changes, not lookups). A consequence: an *unknown* user's
+> read attempt is rejected **silently**, whereas an unknown user's *write or approve* is audited
+> as `denied`. That asymmetry is intentional for the core — but a failed-auth read is really a
+> security event, not a normal read. In a hardened deployment you'd also log unknown-user read
+> attempts (repeated probes are worth seeing) as an authentication signal. It's a small,
+> localized change in `requireReader` (`gateway.ts`) — audit the `!user` branch, threading in the
+> tool name; we left it out to keep reads genuinely side-effect-free.
+
 > **Production best practice — don't trust a client-supplied `user`.** Here the `user` argument
 > stands in for authentication, exactly as the brief allows ("this stands in for real auth").
 > In a real deployment the caller's identity would come from the **authenticated MCP session**

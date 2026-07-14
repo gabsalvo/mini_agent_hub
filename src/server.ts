@@ -16,7 +16,6 @@ import { MockCrmAdapter } from "./mock-crm-adapter.js";
 import { ApprovalQueue } from "./approval-queue.js";
 import { AuditLog } from "./audit-log.js";
 import { Gateway } from "./gateway.js";
-import { DealChangeSchema } from "./schemas.js";
 import type { GatewayResult } from "./types.js";
 
 // ── Compose the Hub once (all in-memory for the challenge) ──────────────────
@@ -38,9 +37,14 @@ const queryArg = z.string().describe("Search text, matched against contact name 
 const noteArg = z.string().min(1).describe("The activity note to record.");
 const reasonArg = z.string().optional().describe("Optional reason, recorded in the audit log.");
 const auditFilterArg = z.string().optional().describe("Optional deal id to filter the audit trail.");
-const changesArg = DealChangeSchema.describe(
-  "Fields to change. At least one of stage, value, notes; unknown fields are rejected.",
-);
+// Loose on purpose: the authoritative, *audited* validation lives in the gateway
+// (Gateway.proposeDealUpdate), so a malformed payload leaves an audit trail instead of being
+// silently rejected here at the transport layer.
+const changesArg = z
+  .record(z.unknown())
+  .describe(
+    "Proposed changes as an object. Recognized fields: stage (lead|qualified|proposal|negotiation|won|lost), value (number ≥ 0), notes (string). At least one is required; unknown fields are rejected and the attempt is audited.",
+  );
 
 /** Serialize a GatewayResult into the MCP tool response shape. */
 function toToolResult(result: GatewayResult) {

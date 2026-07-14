@@ -7,6 +7,11 @@ permissions are enforced server-side, and every write, approval, and denial is a
 Built for the WAIMAKERS coding challenge. Two users are seeded: `sara` (sales, approver —
 reads and writes) and `victor` (viewer — reads only).
 
+> **🤖 Reading this as an LLM or agent?** See **[`READMELLM.md`](./READMELLM.md)** — the same
+> project condensed into a dense, structured spec (tool signatures, permission matrix, gateway
+> decision rules, data shapes, invariants, file map) optimized for fast, unambiguous machine
+> reading and for extending the code correctly.
+
 ---
 
 ## Project layout — every file
@@ -39,7 +44,8 @@ gabriele_salvo_mini_agent_hub/
 ├── package-lock.json          locked dependency tree
 ├── tsconfig.json              TypeScript compiler config (strict, ES modules)
 ├── .gitignore                 ignores node_modules/ and build output
-└── README.md                  this file
+├── README.md                  this file (human-facing)
+└── READMELLM.md               machine-optimized spec of the same project (for LLMs/agents)
 ```
 
 ### The `src/` layering (who depends on whom)
@@ -239,7 +245,8 @@ Notes:
   same deal first, then approve `pa_N`. It is rejected as stale and returns a
   `{ field, base, current, proposed }` comparison to re-propose from.
 - **Malformed payload:** send `update_deal` with `changes: {"priority":"high"}`. It is rejected by
-  validation before it ever reaches the queue.
+  validation before it ever reaches the queue — and, unlike a raw transport error, the attempt
+  is recorded in the audit log as `rejected` ("Invalid payload: …").
 - **Victor can still read:** `view_audit_log` / `view_pending_queue` as `victor` work — reads are open.
 
 ---
@@ -358,9 +365,10 @@ permission denial (`denied`).
 - The brief lists this outcome as `pending`; we named it **`queued`** on purpose, so the audit
   *event* ("the write was queued") is never confused with a `PendingAction`'s
   `status: "pending"` *state*. It also reads naturally with the FIFO queue.
-- **`rejected`** intentionally also covers a write aimed at a non-existent deal (a client input
-  error), not only approver/stale rejections — we kept the trail complete rather than add a
-  separate `failed` outcome for a case the mock CRM can barely produce.
+- **`rejected`** intentionally also covers write attempts that never entered the queue — a
+  malformed `update_deal` payload, or a write aimed at a non-existent deal — not only
+  approver/stale rejections. We kept the audit trail complete rather than add a separate
+  `failed` outcome; the `reason` field says which case it was.
 
 ### Flow
 
@@ -386,7 +394,9 @@ flowchart TD
     %% High-risk write — queued, NOT applied
     G -- "HIGH-RISK write<br/>update_deal" --> PH{"role =<br/>sales?"}
     PH -- "no" --> D
-    PH -- "yes" --> Q["clone snapshot →<br/>enqueue (status: pending)<br/>audit: QUEUED<br/><b>CRM not changed yet</b>"]
+    PH -- "yes" --> VP{"changes valid?<br/>(schemas.ts,<br/>in the gateway)"}
+    VP -- "no" --> D3["audit: REJECTED<br/>(invalid payload)"]
+    VP -- "yes" --> Q["clone snapshot →<br/>enqueue (status: pending)<br/>audit: QUEUED<br/><b>CRM not changed yet</b>"]
 
     %% Approve / reject — approver only, freshness re-checked
     G -- "approve / reject" --> PA{"is<br/>approver?"}
@@ -412,8 +422,12 @@ flowchart TD
 - **Unauthorized / unknown user** — denied server-side and audited.
 - **Deal missing on approval** — rejected and audited (defensive: the mock CRM has no delete,
   so this can't occur today, but the guard makes the model safe if it ever gains one).
-- **Malformed payload** — a strict Zod schema rejects invented fields / wrong types / empty
-  changes at the tool boundary, before anything reaches the queue.
+- **Malformed payload** — the gateway validates every `update_deal` payload with a strict Zod
+  schema (invented fields, wrong types, empty change) before anything reaches the queue, and
+  records the blocked attempt as `outcome: rejected` (reason `"Invalid payload: …"`). Validation
+  lives in the governed path — not only at the transport layer — precisely so the attempt is
+  audited. A viewer's malformed write is still `denied` first: permission is checked before
+  validation.
 
 ---
 

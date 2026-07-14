@@ -13,6 +13,7 @@ import type { CrmPort } from "./crm-port.js";
 import type { AuditLog } from "./audit-log.js";
 import type { ApprovalQueue } from "./approval-queue.js";
 import { authorize } from "./permissions.js";
+import { DealChangeSchema } from "./schemas.js";
 import type { Deal, User } from "./crm.js";
 import type { Capability, DealChange, FieldConflict, GatewayResult } from "./types.js";
 
@@ -78,10 +79,21 @@ export class Gateway {
 
   // ── High-risk write: queued for approval, does NOT apply yet ──────────────
 
-  proposeDealUpdate(actorId: string, dealId: string, changes: DealChange): GatewayResult {
+  proposeDealUpdate(actorId: string, dealId: string, rawChanges: unknown): GatewayResult {
     const action = "update_deal";
     const user = this.authorizeWriter(actorId, action, "write_high_risk", dealId);
     if (!user) return denied(actorId, "update deals");
+
+    // Validate the proposed change here, inside the governed path — NOT only at the transport
+    // layer — so a malformed payload (invented field, wrong type, empty change) is rejected
+    // AND audited. It never reaches the queue, but the attempt still leaves a trail.
+    const validation = DealChangeSchema.safeParse(rawChanges);
+    if (!validation.success) {
+      const reason = `Invalid payload: ${validation.error.issues.map((issue) => issue.message).join("; ")}`;
+      this.audit.record({ actor: user.id, action, outcome: "rejected", dealId, reason });
+      return fail(reason);
+    }
+    const changes = validation.data;
 
     const deal = this.crm.getDeal(dealId);
     if (!deal) {

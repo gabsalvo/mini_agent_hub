@@ -7,6 +7,8 @@ permissions are enforced server-side, and every write, approval, and denial is a
 Built for the WAIMAKERS coding challenge. Two users are seeded: `sara` (sales, approver —
 reads and writes) and `victor` (viewer — reads only).
 
+> **🎥 Demo — [watch the 5-minute walkthrough](https://drive.google.com/file/d/17klmdtZYhgPFtFTzPOD0ZvV1fu9nNKxy/view?usp=sharing)** (Google Drive): `log_activity` executing immediately, an `update_deal` getting queued, approved by Sara, and the audit log showing it all.
+
 > **🤖 Reading this as an LLM or agent?** See **[`READMELLM.md`](./READMELLM.md)** — the same
 > project condensed into a dense, structured spec (tool signatures, permission matrix, gateway
 > decision rules, data shapes, invariants, file map) optimized for fast, unambiguous machine

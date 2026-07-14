@@ -309,15 +309,33 @@ authenticated user — an auditor reconstructs what the agent *changed*, not wha
 > localized change in `requireReader` (`gateway.ts`) — audit the `!user` branch, threading in the
 > tool name; we left it out to keep reads genuinely side-effect-free.
 
-> **Production best practice — don't trust a client-supplied `user`.** Here the `user` argument
-> stands in for authentication, exactly as the brief allows ("this stands in for real auth").
-> In a real deployment the caller's identity would come from the **authenticated MCP session**
-> (OAuth/OIDC issued by the client, or company SSO/an identity provider) — never a string the AI
-> can set. The Hub would then map that *verified* identity to roles and permissions managed
-> centrally: an IdP/directory and/or a policy engine (RBAC/ABAC, e.g. Open Policy Agent), so
-> access follows the company's **real access policies** instead of "act as sara / as victor".
-> The clean part: only `permissions.ts` (the single decision point) would change — the gateway,
-> queue, and audit trail stay exactly as they are.
+### Authentication — what's here, and how we'd make it real
+
+**What's here (the boilerplate's model).** Identity is the `user` string passed with each tool
+call; the gateway resolves it via `crm.getUser(user)` to a `{ role, approver }` record in the
+seed directory. There is **no verification** — no token, session, or header (confirmed: the
+codebase has zero auth-handling code) — so the string is trusted verbatim. The transport is
+**stdio**: a local process launched by one operator, so "whoever started the server" is the
+implicit trust boundary. This is a deliberate stand-in — the brief states the `user` arg "stands
+in for real authentication," and for a local, single-user challenge that is appropriate.
+
+**How we'd make it real** (this is also what the remote/Cloudflare stretch would require):
+
+1. **Move off stdio to a remote transport** (MCP Streamable HTTP). Auth only becomes meaningful
+   once the server is reachable by more than the person who launched it.
+2. **Adopt MCP's Authorization spec** — OAuth 2.1 (authorization-code + PKCE). The server acts as
+   an OAuth **resource server** and validates a **bearer token** on every request.
+3. **Derive identity from the token, not a tool argument.** `actorId` becomes the verified token
+   subject/claims, and the `user` tool arg is **removed** so the AI can never assert an identity.
+4. **Map the verified subject → role/permissions centrally** — from IdP / JWT claims (e.g. group
+   membership) or an external RBAC/ABAC store or policy engine (e.g. Open Policy Agent).
+   `permissions.ts` becomes the policy-decision point, fed by *verified* identity.
+5. **Audit `actor` = the verified subject**, so the trail is cryptographically attributable.
+
+**What changes vs. stays.** Only the *identity source* (token instead of arg) and the *permission
+data source* (IdP/policy store instead of seed) change — plus dropping the `user` arg. The
+gateway, approval queue, audit trail, validation, and every tool stay exactly as they are. That
+one-place change is the payoff of routing every call through a single choke point.
 
 ---
 

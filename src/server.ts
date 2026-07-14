@@ -30,13 +30,15 @@ const server = new McpServer({ name: "mini-agent-hub", version: "1.0.0" });
 // ── Reusable argument schemas ───────────────────────────────────────────────
 // Declared once and shared, so each tool registration below stays a few clean lines.
 
-const userArg = z.string().describe("ID of the user the AI is acting for (e.g. 'sara' or 'victor').");
-const dealIdArg = z.string().describe("Deal id, e.g. 'd1'.");
-const actionIdArg = z.string().describe("Pending action id, e.g. 'pa_1'.");
-const queryArg = z.string().describe("Search text, matched against contact name and company.");
-const noteArg = z.string().min(1).describe("The activity note to record.");
-const reasonArg = z.string().optional().describe("Optional reason, recorded in the audit log.");
-const auditFilterArg = z.string().optional().describe("Optional deal id to filter the audit trail.");
+// `.trim()` normalizes input at the boundary, so a stray space (e.g. "d1 ") still resolves —
+// the ids reach the gateway already clean.
+const userArg = z.string().trim().describe("ID of the user the AI is acting for (e.g. 'sara' or 'victor').");
+const dealIdArg = z.string().trim().describe("Deal id, e.g. 'd1'.");
+const actionIdArg = z.string().trim().describe("Pending action id, e.g. 'pa_1'.");
+const queryArg = z.string().trim().describe("Search text, matched against contact name and company.");
+const noteArg = z.string().trim().min(1).describe("The activity note to record.");
+const reasonArg = z.string().trim().optional().describe("Optional reason, recorded in the audit log.");
+const auditFilterArg = z.string().trim().optional().describe("Optional deal id to filter the audit trail.");
 // Loose on purpose: the authoritative, *audited* validation lives in the gateway
 // (Gateway.proposeDealUpdate), so a malformed payload leaves an audit trail instead of being
 // silently rejected here at the transport layer.

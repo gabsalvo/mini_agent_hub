@@ -49,6 +49,17 @@ validation is `DealChangeSchema.safeParse` inside `Gateway.proposeDealUpdate`.
   ⇒ `audit{denied}` + return. For `update_deal`, permission is checked BEFORE payload validation.
 - Reads: any known user passes; unknown user ⇒ error, NOT audited.
 
+## AUTH (current vs production)
+- CURRENT: identity = `user` tool arg (unverified string) → `crm.getUser(user)` → `{role, approver}`
+  from seed. No token/session/OAuth/header code anywhere; transport = stdio (local single-operator
+  trust). Deliberate stand-in (brief: "stands in for real authentication").
+- PRODUCTION: remote transport (MCP Streamable HTTP) + MCP Authorization (OAuth 2.1 + PKCE); server
+  = OAuth resource server validating a bearer token per request; `actorId` = verified token subject
+  (DROP the `user` arg so identity can't be asserted by the AI); map subject→role via IdP/JWT claims
+  or RBAC/ABAC (e.g. OPA), sourced by `permissions.ts`; audit `actor` = verified subject.
+- UNCHANGED by that swap: gateway, queue, audit, validation, tools. Only identity + permission-data
+  sources change.
+
 ## GATEWAY DECISION LOGIC (pseudocode; `gateway.ts`)
 ```
 READ(actor):                     # search/list/view/queue/audit

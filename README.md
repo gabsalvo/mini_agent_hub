@@ -270,14 +270,18 @@ Two independent dimensions, so the model has no special cases:
 The gateway checks this on **every** call; no tool can bypass it. Reads are open to any
 authenticated user — an auditor reconstructs what the agent *changed*, not what anyone *read*.
 
-> **Design choice — reads aren't audited, including failed ones.** Successful reads leave no
-> record on purpose (the trail is about changes, not lookups). A consequence: an *unknown* user's
-> read attempt is rejected **silently**, whereas an unknown user's *write or approve* is audited
-> as `denied`. That asymmetry is intentional for the core — but a failed-auth read is really a
-> security event, not a normal read. In a hardened deployment you'd also log unknown-user read
-> attempts (repeated probes are worth seeing) as an authentication signal. It's a small,
-> localized change in `requireReader` (`gateway.ts`) — audit the `!user` branch, threading in the
-> tool name; we left it out to keep reads genuinely side-effect-free.
+> **Conscious trade-off — the trail logs *actions*, not reads.** Successful reads leave no
+> governance record on purpose: the trail reconstructs what the agent *changed*, and read noise
+> would only dilute it. Reads still matter — but as a *different* concern, with different volume
+> and consumers. In production they belong in **observability logging** (user, tool, target — for
+> debugging and usage insight) alongside operational logs, not in the governance trail (and, at
+> mid-market scale, not necessarily a full SIEM). Denials split the same way: one that **fails
+> loudly** — a viewer trying to write or approve, or an unknown user — is logged as a security
+> event via `denied`; a read that's simply rejected (nothing withheld to even see) currently
+> leaves no record. That asymmetry is deliberate at this scale (a small, known set of users per
+> client), with a cheap upgrade path if a client's compliance ever needs it: audit the `!user`
+> branch in `requireReader` (`gateway.ts`), or — for row-level filtering — log only when something
+> was actually withheld.
 
 ### Authentication — what's here, and how we'd make it real
 
@@ -454,6 +458,10 @@ flowchart TD
    configurable. **With more time:** real authentication, and the Agent Hub's actual model —
    per-client, per-action-type autonomy that an agent *earns* by building a track record in
    the audit log.
+
+**A fourth, smaller scoping decision** rounds these out: the audit trail is scoped to *actions,
+not reads* — governance and observability are separate concerns, with different consumers and
+volume. It's documented as a conscious trade-off under the permission model above.
 
 ---
 

@@ -22,7 +22,7 @@ High modularity is deliberate: one responsibility per file, so the governance co
 small, testable, and swappable. Nothing here is bigger than it needs to be.
 
 ```
-gabriele_salvo_mini_agent_hub/
+mini_agent_hub/
 ├── src/                       TypeScript source (the whole Hub)
 │   ├── crm.ts                 (GIVEN, untouched) mock CRM — the "external system"
 │   ├── crm-port.ts            CrmPort interface the Hub depends on instead of crm.ts
@@ -179,7 +179,7 @@ Point it at the built server with an absolute path:
   "mcpServers": {
     "mini-agent-hub": {
       "command": "node",
-      "args": ["<absolute-path>/gabriele_salvo_mini_agent_hub/dist/server.js"]
+      "args": ["<absolute-path>/mini_agent_hub/dist/server.js"]
     }
   }
 }

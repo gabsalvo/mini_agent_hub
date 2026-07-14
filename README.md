@@ -72,40 +72,6 @@ compile-time only and erased at runtime, so it creates no real coupling. To add 
 backend you write one new class implementing `CrmPort` and swap it in `server.ts` — no
 gateway, queue, audit, or permission code changes.
 
-### `dist/` — the compiled JavaScript you actually run
-
-TypeScript does not run directly; Node runs JavaScript. So `npm run build` invokes the
-TypeScript compiler (`tsc`, configured by `tsconfig.json`), which reads every file under `src/`
-and writes **two files per module** into `dist/`:
-
-- **`<name>.js`** — the compiled, runnable JavaScript. This is what actually executes. When the
-  MCP Inspector or Claude Code "starts the server," they run `node dist/server.js` — never the
-  `.ts` file. That is exactly why you build before running, and why an out-of-date `dist/` shows
-  stale behaviour until you rebuild.
-- **`<name>.js.map`** — a *source map*: a small JSON file that maps each line of the generated
-  `.js` back to the original `.ts`. You never run it directly. Its only job is to make debuggers
-  and error stack traces point at your readable TypeScript source instead of the compiled output.
-
-`dist/` is 100% generated: you never hand-edit it, it is safe to delete (a rebuild recreates it
-in full), and it is normally git-ignored. It mirrors `src/` one-for-one — every `src/*.ts` has
-exactly one compiled pair, and nothing in `dist/` exists without a `src/` original:
-
-| Source (`src/`) | Compiled (`dist/`) | Source map (`dist/`) |
-|---|---|---|
-| `server.ts` | `server.js` | `server.js.map` |
-| `gateway.ts` | `gateway.js` | `gateway.js.map` |
-| `permissions.ts` | `permissions.js` | `permissions.js.map` |
-| `approval-queue.ts` | `approval-queue.js` | `approval-queue.js.map` |
-| `audit-log.ts` | `audit-log.js` | `audit-log.js.map` |
-| `mock-crm-adapter.ts` | `mock-crm-adapter.js` | `mock-crm-adapter.js.map` |
-| `crm-port.ts` | `crm-port.js` | `crm-port.js.map` |
-| `crm.ts` | `crm.js` | `crm.js.map` |
-| `types.ts` | `types.js` | `types.js.map` |
-| `schemas.ts` | `schemas.js` | `schemas.js.map` |
-| `sequence.ts` | `sequence.js` | `sequence.js.map` |
-
-That is 11 `.js` files + 11 `.js.map` files = the 22 files you see in `dist/`.
-
 ### Reading order — how one tool call flows through the files
 
 To understand the codebase (or to walk someone through it), follow a single request top to

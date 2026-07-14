@@ -1,0 +1,21 @@
+{
+  "users": [
+    { "id": "sara", "name": "Sara de Vries", "role": "sales", "approver": true },
+    { "id": "victor", "name": "Victor Lam", "role": "viewer", "approver": false }
+  ],
+  "contacts": [
+    { "id": "c1", "name": "Hendrik Jansen", "company": "Jansen Logistics BV", "email": "h.jansen@jansenlogistics.nl", "phone": "+31 6 1234 5678" },
+    { "id": "c2", "name": "Emma Bakker", "company": "Bakker & Partners", "email": "emma@bakkerpartners.nl", "phone": "+31 6 8765 4321" },
+    { "id": "c3", "name": "Lucas Visser", "company": "Visser Installaties", "email": "l.visser@visserinstallaties.nl", "phone": "+31 6 5555 1234" },
+    { "id": "c4", "name": "Sophie van Dijk", "company": "Van Dijk Retail Group", "email": "s.vandijk@vdretail.nl", "phone": "+31 6 9999 8888" }
+  ],
+  "deals": [
+    { "id": "d1", "contactId": "c1", "title": "Fleet tracking rollout", "stage": "proposal", "value": 45000, "notes": "Waiting on board sign-off, expected mid-month." },
+    { "id": "d2", "contactId": "c2", "title": "Legal workflow automation", "stage": "qualified", "value": 18000, "notes": "Second call scheduled." },
+    { "id": "d3", "contactId": "c3", "title": "Service planning pilot", "stage": "negotiation", "value": 27500, "notes": "Pushing back on onboarding fee." },
+    { "id": "d4", "contactId": "c4", "title": "Store analytics dashboard", "stage": "lead", "value": 60000, "notes": "Inbound via website, not yet contacted." }
+  ],
+  "activities": [
+    { "id": "a1", "dealId": "d1", "userId": "sara", "note": "Intro call done. Hendrik wants a reference client before committing.", "timestamp": "2026-07-06T09:30:00Z" }
+  ]
+}

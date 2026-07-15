@@ -185,10 +185,7 @@ Point it at the built server with an absolute path:
 }
 ```
 
-### How to use the tools (worked demo)
-
-Run these in the Inspector's **Tools** tab in order. Each row is a tool + the exact
-arguments to enter. This is also a ready-made script for the screen recording.
+### How to use the tools
 
 | # | Tool | Arguments | What you should see |
 |---|---|---|---|
